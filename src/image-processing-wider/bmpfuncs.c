@@ -14,7 +14,7 @@ void storeImage(double* imageOut, const char* filename, int rows, int cols, int 
     unsigned char* buffer;
     int i, j;
 
-    int bytes;
+    size_t bytes;
 
     int height, width, bit;
 
@@ -76,8 +76,10 @@ void storeImage(double* imageOut, const char* filename, int rows, int cols, int 
             temp = (unsigned int)imageOut[i * cols + j];
             for (int k = 0; k < color_bytes; k++)
             {
-                fwrite((unsigned char)(temp & 255), sizeof(unsigned char), 1, ofp);
-                temp >> 8;
+                temp &= 255;
+                unsigned char value = (unsigned char)temp;
+                fwrite(&value, sizeof(unsigned char), 1, ofp);
+                temp >>= 8;
             }
             // tmp = (unsigned char)imageOut[i * cols + j];
             // fwrite(&tmp, sizeof(char), 1, ofp);
@@ -98,11 +100,12 @@ void storeImage(double* imageOut, const char* filename, int rows, int cols, int 
 * Read bmp image and convert to byte array. Also output the width and height
 완료
 */
-double* readImage(const char* filename, int* widthOut, int* heightOut, int* bitsOut) 
+double* readImage(const char* filename, int* widthOut, int* heightOut, uchar* bitsOut)
 {
     unsigned int* imageData;
 
-    int height, width, bits;
+    int height, width;
+    uchar bits;
     uchar tmp;
     int offset;
     unsigned int i_temp;
@@ -124,7 +127,7 @@ double* readImage(const char* filename, int* widthOut, int* heightOut, int* bits
     fread(&height, 4, 1, fp);
 
     fseek(fp, 28, SEEK_SET);
-    fread(&bits, 1, 1, fp);
+    fread(&bits, 2, 1, fp);
 
     printf("width = %d\n", width);
     printf("height = %d\n", height);

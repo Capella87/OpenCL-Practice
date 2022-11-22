@@ -13,7 +13,8 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-    int width, height, bits;
+    int width, height;
+    uchar bits;
     double* input = readImage(argv[1], &width, &height, &bits);
     double* output = (double*)malloc(sizeof(double) * width * height);
 
