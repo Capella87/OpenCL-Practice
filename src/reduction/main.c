@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include <time.h>
+
+
 #define COUNT 16777216
 
 #define CHECK_ERROR(err) \
@@ -93,14 +96,18 @@ int main(void)
     CHECK_ERROR(err);
 
 
+    size_t global_size = COUNT;
+    size_t local_size = 256;
+
     size_t size = COUNT * sizeof(int);
     size_t half = size / 2;
     int* input_arr = (int*)malloc(size);
     for (int i = 0; i < COUNT; i++)
         input_arr[i] = 2;
+    const size_t group_count = COUNT / local_size;
 
-    int* global_sum_arr = (int*)malloc(sizeof(int) * 65536);
-    for (int i = 0; i < 65536; i++)
+    int* global_sum_arr = (int*)malloc(sizeof(int) * group_count);
+    for (int i = 0; i < group_count; i++)
         global_sum_arr[i] = 0;
     int totalNum = COUNT;
 
@@ -109,13 +116,13 @@ int main(void)
     cl_mem input = clCreateBuffer(context, CL_MEM_READ_ONLY, size, (void*)0, &err);
     CHECK_ERROR(err);
 
-    cl_mem global_sum = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int) * 65536, (void*)0, &err);
+    cl_mem global_sum = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int) * group_count, (void*)0, &err);
     CHECK_ERROR(err);
 
     err = clEnqueueWriteBuffer(queue, input, CL_FALSE, 0, size, input_arr, 0, (void*)0, (void*)0);
     CHECK_ERROR(err);
 
-    err = clEnqueueWriteBuffer(queue, global_sum, CL_FALSE, 0, sizeof(int) * 65536, global_sum_arr, 0, (void*)0, (void*)0);
+    err = clEnqueueWriteBuffer(queue, global_sum, CL_FALSE, 0, sizeof(int) * group_count, global_sum_arr, 0, (void*)0, (void*)0);
     CHECK_ERROR(err);
 
     // Set kernel arguments
@@ -133,31 +140,55 @@ int main(void)
     CHECK_ERROR(err);
 
     // Initialize global size and execute over the kernel
+    clock_t start_time, end_time;
 
-    // Warning
-    size_t global_size = COUNT;
-    size_t local_size = 256;
+    // Begin elapsed time measurement
+    start_time = clock();
 
     err = clEnqueueNDRangeKernel(queue, kernel, 1, (void*)0, &global_size, &local_size, 0, (void*)0, (void*)0);
     CHECK_ERROR(err);
 
-    err = clEnqueueReadBuffer(queue, global_sum, CL_TRUE, 0, sizeof(int) * 65536, global_sum_arr, 0, (void*)0, (void*)0);
+    err = clEnqueueReadBuffer(queue, global_sum, CL_TRUE, 0, sizeof(int) * group_count, global_sum_arr, 0, (void*)0, (void*)0);
     CHECK_ERROR(err);
 
+    clFinish(queue);
+
     int sum = 0;
-    for (int i = 0; i < 65536; i++)
+    for (int i = 0; i < group_count; i++)
         sum += global_sum_arr[i];
+
+    end_time = clock();
+
     printf("%d\n", sum);
+    printf("Elapsed time: %f sec\n", (double)(end_time - start_time) / CLK_TCK);
 
     // Finish the work
 
-    clFinish(queue);
     clReleaseMemObject(input);
     clReleaseMemObject(global_sum);
     clReleaseProgram(program);
     clReleaseKernel(kernel);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
+
+    // Sequential Calculation
+
+    start_time = clock();
+
+    sum = 0;
+    for (int i = 0; i < COUNT; i++)
+        sum += input_arr[i];
+
+    end_time = clock();
+
+    printf("%d\n", sum);
+    printf("Elapsed time: %f sec\n", (double)(end_time - start_time) / CLK_TCK);
+    
+
+    // Deallocate arrays
+
+    free(input_arr);
+    free(global_sum_arr);
 
     return 0;
 }
