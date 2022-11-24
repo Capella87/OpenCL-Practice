@@ -136,7 +136,7 @@ int main(void)
     end_time = clock();
 
     printf("%f\n", sum);
-    printf("Elapsed Time : %lf sec\n", (end_time - start_time) / CLK_TCK);
+    printf("Elapsed Time : %lf sec\n", (double)(end_time - start_time) / CLK_TCK);
 
     clReleaseMemObject(result);
     clReleaseProgram(program);
@@ -157,7 +157,7 @@ int main(void)
     }
     end_time = clock();
     printf("%f\n", sum);
-    printf("Elapsed Time : %lf sec\n", (end_time - start_time) / CLK_TCK);
+    printf("Elapsed Time : %lf sec\n", (double)(end_time - start_time) / CLK_TCK);
 
     free(arr);
     return 0;
